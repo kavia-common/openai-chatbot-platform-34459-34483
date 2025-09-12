@@ -13,6 +13,27 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
+# Load environment variables from a .env file if present (for local/dev or orchestrated envs without automatic injection)
+# This avoids hardcoding secrets and allows flexible configuration.
+try:
+    from dotenv import load_dotenv  # type: ignore
+    # Load .env from the project root (BASE_DIR after it is set), but we can pre-load using this file's path
+    _settings_dir = Path(__file__).resolve().parent
+    _project_root = _settings_dir.parent  # chatbot_backend/
+    # Common places for .env: project root or workspace root above
+    candidate_env_files = [
+        _project_root / ".env",
+        _project_root.parent / ".env",
+    ]
+    for _env_path in candidate_env_files:
+        if _env_path.exists():
+            load_dotenv(dotenv_path=_env_path, override=False)
+            break
+except Exception:
+    # If python-dotenv isn't installed yet or any error occurs, proceed silently;
+    # CI will install dependencies and reload. Environment may also be injected by the orchestrator.
+    pass
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,7 +48,11 @@ SECRET_KEY = 'django-insecure-0ku_as45vs5isd^px=t#m8g#^*x7f=w#gw-xb^t@^-pom)r^t6
 DEBUG = True
 # IMPORTANT: Configure DATABASE_URL or explicit PG vars via .env (handled by orchestrator)
 # Do not hardcode secrets in code.
+# OpenAI configuration (read by api/openai_client.py with os.getenv as well)
+# These are read here for visibility and optional usage elsewhere.
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
 ALLOWED_HOSTS = [
     '.kavia.ai',
